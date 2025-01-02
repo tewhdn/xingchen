@@ -153,6 +153,7 @@
       border-radius: 4px;
       color: #00ff88;
       white-space: pre-wrap; /* 保留换行和空格 */
+      word-wrap: break-word; /* 防止长行文字溢出 */
     }
 
     input[type="text"] {
@@ -247,7 +248,12 @@
       if (!userInput) return;
 
       const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML += `<div class="message user"><pre>${userInput}</pre></div>`;
+      const userMessage = document.createElement('div');
+      userMessage.className = 'message user';
+      const preUser = document.createElement('pre');
+      preUser.textContent = userInput; // 使用 textContent 保证是纯文本
+      userMessage.appendChild(preUser);
+      chatBox.appendChild(userMessage);
 
       const response = await fetch('/chat', {
         method: 'POST',
@@ -258,9 +264,14 @@
       });
 
       const data = await response.json();
-      chatBox.innerHTML += `<div class="message assistant"><pre>${data.response}</pre></div>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
+      const assistantMessage = document.createElement('div');
+      assistantMessage.className = 'message assistant';
+      const preAssistant = document.createElement('pre');
+      preAssistant.textContent = data.response; // 使用 textContent 保证是纯文本
+      assistantMessage.appendChild(preAssistant);
+      chatBox.appendChild(assistantMessage);
 
+      chatBox.scrollTop = chatBox.scrollHeight;
       document.getElementById('user-input').value = '';
     }
 
