@@ -147,6 +147,14 @@
       color: #00ff88;
     }
 
+    pre {
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 4px;
+      color: #00ff88;
+      white-space: pre-wrap; /* 保留换行和空格 */
+    }
+
     input[type="text"] {
       width: calc(100% - 90px);
       padding: 10px;
@@ -225,7 +233,9 @@
   <!-- 聊天容器 -->
   <div class="chat-container">
     <div class="chat-box" id="chat-box">
-      <div class="message assistant">（星辰静静地凝视着你）你好，我是星辰，星空的守护者。你有什么问题吗？</div>
+      <div class="message assistant">
+        <pre>（星辰静静地凝视着你）你好，我是星辰，星空的守护者。你有什么问题吗？</pre>
+      </div>
     </div>
     <input type="text" id="user-input" placeholder="输入你的问题..." onkeypress="handleKeyPress(event)">
     <button onclick="sendMessage()">发送</button>
@@ -237,7 +247,7 @@
       if (!userInput) return;
 
       const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML += `<div class="message user">${userInput}</div>`;
+      chatBox.innerHTML += `<div class="message user"><pre>${userInput}</pre></div>`;
 
       const response = await fetch('/chat', {
         method: 'POST',
@@ -248,7 +258,7 @@
       });
 
       const data = await response.json();
-      chatBox.innerHTML += `<div class="message assistant">${data.response}</div>`;
+      chatBox.innerHTML += `<div class="message assistant"><pre>${data.response}</pre></div>`;
       chatBox.scrollTop = chatBox.scrollHeight;
 
       document.getElementById('user-input').value = '';
