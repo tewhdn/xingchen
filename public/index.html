@@ -147,13 +147,37 @@
       color: #00ff88;
     }
 
-    pre {
+    .code-container {
+      position: relative;
       background-color: rgba(0, 0, 0, 0.5);
-      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 4px;
-      color: #00ff88;
+      padding: 10px;
+      margin: 10px 0;
+    }
+
+    .copy-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .copy-button:hover {
+      background-color: #0056b3;
+    }
+
+    pre {
       white-space: pre-wrap; /* 保留换行和空格 */
       word-wrap: break-word; /* 防止长行文字溢出 */
+      margin: 0;
+      color: #00ff88;
     }
 
     input[type="text"] {
@@ -247,29 +271,84 @@
       const userInput = document.getElementById('user-input').value;
       if (!userInput) return;
 
+      // 禁用输入框和按钮
+      const input = document.getElementById('user-input');
+      const button = document.querySelector('button');
+      input.disabled = true;
+      button.disabled = true;
+
       const chatBox = document.getElementById('chat-box');
+
+      // 用户消息
       const userMessage = document.createElement('div');
       userMessage.className = 'message user';
       const preUser = document.createElement('pre');
-      preUser.textContent = userInput; // 使用 textContent 保证是纯文本
+      preUser.textContent = userInput;
       userMessage.appendChild(preUser);
       chatBox.appendChild(userMessage);
 
-      const response = await fetch('/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: userInput }),
-      });
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: userInput }),
+        });
 
-      const data = await response.json();
-      const assistantMessage = document.createElement('div');
-      assistantMessage.className = 'message assistant';
-      const preAssistant = document.createElement('pre');
-      preAssistant.textContent = data.response; // 使用 textContent 保证是纯文本
-      assistantMessage.appendChild(preAssistant);
-      chatBox.appendChild(assistantMessage);
+        if (!response.ok) {
+          throw new Error(`请求失败，状态码：${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // AI 消息
+        const assistantMessage = document.createElement('div');
+        assistantMessage.className = 'message assistant';
+
+        // 检查是否为代码
+        if (data.response.includes('```')) {
+          // 提取代码内容
+          const codeContent = data.response.replace(/```/g, '').trim();
+
+          // 代码容器
+          const codeContainer = document.createElement('div');
+          codeContainer.className = 'code-container';
+
+          // 复制按钮
+          const copyButton = document.createElement('button');
+          copyButton.className = 'copy-button';
+          copyButton.textContent = '复制';
+          copyButton.onclick = () => copyToClipboard(codeContent);
+
+          // 代码内容
+          const preAssistant = document.createElement('pre');
+          preAssistant.textContent = codeContent;
+
+          codeContainer.appendChild(preAssistant);
+          codeContainer.appendChild(copyButton);
+          assistantMessage.appendChild(codeContainer);
+        } else {
+          // 普通文本
+          const preAssistant = document.createElement('pre');
+          preAssistant.textContent = data.response;
+          assistantMessage.appendChild(preAssistant);
+        }
+
+        chatBox.appendChild(assistantMessage);
+      } catch (error) {
+        console.error('请求出错：', error);
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'message assistant';
+        const preError = document.createElement('pre');
+        preError.textContent = '请求出错，请稍后重试。';
+        errorMessage.appendChild(preError);
+        chatBox.appendChild(errorMessage);
+      } finally {
+        // 启用输入框和按钮
+        input.disabled = false;
+        button.disabled = false;
+      }
 
       chatBox.scrollTop = chatBox.scrollHeight;
       document.getElementById('user-input').value = '';
@@ -279,6 +358,14 @@
       if (event.key === 'Enter') {
         sendMessage();
       }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('已复制到剪贴板！');
+      }).catch((error) => {
+        console.error('复制失败：', error);
+      });
     }
   </script>
 </body>
