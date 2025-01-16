@@ -101,10 +101,12 @@
       display: flex;
       flex-direction: column;
       z-index: 1;
+      margin-bottom: 60px;
     }
 
     .chat-box {
       flex: 1;
+      max-height: 400px;
       overflow-y: auto;
       border: 1px solid var(--border-color);
       padding: 10px;
@@ -164,6 +166,13 @@
     }
 
     .input-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: var(--container-bg);
+      padding: 10px;
+      box-sizing: border-box;
       display: flex;
       gap: 10px;
     }
@@ -300,18 +309,18 @@
         <pre>（星辰静静地凝视着你）你好，我是星辰，星空的守护者。你有什么问题吗？</pre>
       </div>
     </div>
-    <div class="input-container">
-      <input type="text" id="user-input" placeholder="输入你的问题..." aria-label="输入你的问题" onkeypress="handleKeyPress(event)">
-      <button class="send-button" onclick="sendMessage()" aria-label="发送消息">发送</button>
-      <button class="clear-button" onclick="clearChatHistory()" aria-label="清除聊天记录">清除</button>
-    </div>
+  </div>
+  <div class="input-container">
+    <input type="text" id="user-input" placeholder="输入你的问题..." aria-label="输入你的问题" onkeypress="handleKeyPress(event)">
+    <button class="send-button" onclick="sendMessage()" aria-label="发送消息">发送</button>
+    <button class="clear-button" onclick="clearChatHistory()" aria-label="清除聊天记录">清除</button>
   </div>
   <script>
     function loadChatHistory() {
       const chatBox = document.getElementById('chat-box');
       const chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
 
-      chatHistory.forEach(async (message) => {
+      chatHistory.forEach((message) => {
         if (message.type === 'user') {
           const userMessage = document.createElement('div');
           userMessage.className = 'message user';
@@ -321,14 +330,16 @@
           chatBox.appendChild(userMessage);
         } else if (message.type === 'assistant') {
           const assistantMessage = document.createElement('div');
-          assistantMessage.className = 'message assistant typing';
+          assistantMessage.className = 'message assistant';
           chatBox.appendChild(assistantMessage);
 
           if (message.content.includes('```')) {
             const [textBefore, codeBlock, textAfter] = message.content.split(/```/);
 
             if (textBefore.trim()) {
-              await typeWriter(assistantMessage, textBefore.trim() + '\n');
+              const textDiv = document.createElement('div');
+              textDiv.innerHTML = textBefore.trim() + '<br>';
+              assistantMessage.appendChild(textDiv);
             }
 
             const codeContent = codeBlock.trim();
@@ -340,24 +351,55 @@
             copyButton.setAttribute('aria-label', '复制代码');
             copyButton.onclick = () => copyToClipboard(codeContent);
             const preAssistant = document.createElement('pre');
+            preAssistant.textContent = codeContent;
             codeContainer.appendChild(preAssistant);
             codeContainer.appendChild(copyButton);
             assistantMessage.appendChild(codeContainer);
 
-            await typeWriter(preAssistant, codeContent);
-
             if (textAfter.trim()) {
-              await typeWriter(assistantMessage, '\n' + textAfter.trim());
+              const textDiv = document.createElement('div');
+              textDiv.innerHTML = textAfter.trim();
+              assistantMessage.appendChild(textDiv);
             }
           } else {
-            await typeWriter(assistantMessage, message.content);
+            const textDiv = document.createElement('div');
+            textDiv.textContent = message.content;
+            assistantMessage.appendChild(textDiv);
           }
-
-          assistantMessage.classList.remove('typing');
         }
       });
 
       chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function typeWriter(element, text, isTyping = true) {
+      if (!isTyping) {
+        element.innerHTML = text;
+        return;
+      }
+
+      return new Promise((resolve) => {
+        const speed = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--typing-speed')) || 50;
+        let i = 0;
+        element.innerHTML = '';
+
+        function type() {
+          if (i < text.length) {
+            const char = text.charAt(i);
+            if (char === '\n') {
+              element.innerHTML += '<br>';
+            } else {
+              element.innerHTML += char;
+            }
+            i++;
+            setTimeout(type, speed);
+          } else {
+            resolve();
+          }
+        }
+
+        type();
+      });
     }
 
     function saveChatHistory(message) {
@@ -412,14 +454,16 @@
         saveChatHistory(assistantMessage);
 
         const assistantMessageDiv = document.createElement('div');
-        assistantMessageDiv.className = 'message assistant typing';
+        assistantMessageDiv.className = 'message assistant';
         chatBox.appendChild(assistantMessageDiv);
 
         if (data.response.includes('```')) {
           const [textBefore, codeBlock, textAfter] = data.response.split(/```/);
 
           if (textBefore.trim()) {
-            await typeWriter(assistantMessageDiv, textBefore.trim() + '\n');
+            const textDiv = document.createElement('div');
+            textDiv.innerHTML = textBefore.trim() + '<br>';
+            assistantMessageDiv.appendChild(textDiv);
           }
 
           const codeContent = codeBlock.trim();
@@ -431,20 +475,21 @@
           copyButton.setAttribute('aria-label', '复制代码');
           copyButton.onclick = () => copyToClipboard(codeContent);
           const preAssistant = document.createElement('pre');
+          preAssistant.textContent = codeContent;
           codeContainer.appendChild(preAssistant);
           codeContainer.appendChild(copyButton);
           assistantMessageDiv.appendChild(codeContainer);
 
-          await typeWriter(preAssistant, codeContent);
-
           if (textAfter.trim()) {
-            await typeWriter(assistantMessageDiv, '\n' + textAfter.trim());
+            const textDiv = document.createElement('div');
+            textDiv.innerHTML = textAfter.trim();
+            assistantMessageDiv.appendChild(textDiv);
           }
         } else {
-          await typeWriter(assistantMessageDiv, data.response);
+          const textDiv = document.createElement('div');
+          textDiv.textContent = data.response;
+          assistantMessageDiv.appendChild(textDiv);
         }
-
-        assistantMessageDiv.classList.remove('typing');
       } catch (error) {
         console.error('请求出错：', error);
         const errorMessage = {
@@ -482,31 +527,6 @@
       }).catch((error) => {
         console.error('复制失败：', error);
         alert('复制失败，请手动复制。');
-      });
-    }
-
-    function typeWriter(element, text) {
-      return new Promise((resolve) => {
-        const speed = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--typing-speed')) || 50;
-        let i = 0;
-        element.innerHTML = '';
-
-        function type() {
-          if (i < text.length) {
-            const char = text.charAt(i);
-            if (char === '\n') {
-              element.innerHTML += '<br>';
-            } else {
-              element.innerHTML += char;
-            }
-            i++;
-            setTimeout(type, speed);
-          } else {
-            resolve();
-          }
-        }
-
-        type();
       });
     }
 
