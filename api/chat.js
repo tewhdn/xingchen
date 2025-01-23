@@ -1,61 +1,50 @@
-// 安装所需依赖：npm install express cors dotenv openai
-import express from 'express';
-import cors from 'cors';
-import * as dotenv from 'dotenv';
 import OpenAI from 'openai';
 
-dotenv.config();
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-// 配置中间件
-app.use(cors());
-app.use(express.json());
-
-// 初始化DeepSeek客户端
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY // 从环境变量读取API密钥
+  apiKey: process.env.DEEPSEEK_API_KEY
 });
 
-// 处理聊天请求
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { model, messages } = req.body;
+export default async (req, res) => {
+  // 允许跨域
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-    // 调用DeepSeek API
+  try {
+    const { model = 'deepseek-chat', messages } = req.body;
+    
+    // 添加系统提示词
+    const fullMessages = [{
+      role: "system",
+      content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。"
+    }, ...messages];
+
     const completion = await deepseek.chat.completions.create({
-      model: model || 'deepseek-chat',
-      messages,
+      model,
+      messages: fullMessages,
       temperature: 0.7,
       max_tokens: 2000
     });
 
-    // 返回标准化响应
-    res.json({
+    res.status(200).json({
       success: true,
       choices: [{
-        message: {
-          role: 'assistant',
-          content: completion.choices[0].message.content
-        }
+        message: completion.choices[0].message
       }]
     });
 
   } catch (error) {
-    console.error('API调用失败:', error);
+    console.error('🌠 星轨异常:', error);
     res.status(500).json({
       success: false,
       error: {
-        code: 'DEEPSEEK_API_ERROR',
-        message: error.message
+        code: 'QUANTUM_DISRUPTION',
+        message: `（星云扰动）${error.message}`
       }
     });
   }
-});
-
-// 启动服务器
-app.listen(port, () => {
-  console.log(`🌌 星辰服务器已启动，监听端口：${port}`);
-});
+};
