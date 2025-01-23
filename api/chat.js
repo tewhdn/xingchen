@@ -1,50 +1,54 @@
+import express from 'express';
+import cors from 'cors';
+import * as dotenv from 'dotenv';
 import OpenAI from 'openai';
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
 
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: process.env.DEEPSEEK_API_KEY
 });
 
-export default async (req, res) => {
-  // 允许跨域
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+// 模型白名单
+const VALID_MODELS = ['deepseek-chat', 'deepseek-reasoner'];
 
+app.post('/api/chat', async (req, res) => {
   try {
     const { model = 'deepseek-chat', messages } = req.body;
     
-    // 添加系统提示词
-    const fullMessages = [{
-      role: "system",
-      content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。"
-    }, ...messages];
+    if (!VALID_MODELS.includes(model)) {
+      return res.status(400).json({
+        error: '无效的星轨模式',
+        validModels: VALID_MODELS
+      });
+    }
 
     const completion = await deepseek.chat.completions.create({
       model,
-      messages: fullMessages,
+      messages,
       temperature: 0.7,
       max_tokens: 2000
     });
 
-    res.status(200).json({
-      success: true,
-      choices: [{
-        message: completion.choices[0].message
-      }]
-    });
-
+    res.json({ choices: completion.choices });
   } catch (error) {
-    console.error('🌠 星轨异常:', error);
+    console.error('API错误:', error);
     res.status(500).json({
-      success: false,
       error: {
-        code: 'QUANTUM_DISRUPTION',
-        message: `（星云扰动）${error.message}`
+        code: 'STAR_TRAIL_ERROR',
+        message: error.message
       }
     });
   }
-};
+});
+
+app.listen(port, () => {
+  console.log(`🌠 星辰服务器运行在 http://localhost:${port}`);
+});
