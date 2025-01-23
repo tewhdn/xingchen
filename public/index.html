@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>星辰·宇宙智者</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css">
     <style>
@@ -16,28 +17,36 @@
             font-family: 'Segoe UI', sans-serif;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
             background: linear-gradient(45deg, #0a0a2e, #1a1a4a);
             color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
         }
         
         #chat-container {
-            height: 70vh;
+            flex: 1;
             border: 2px solid var(--星语);
             border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
+            padding: 15px;
+            margin: 15px 0;
             background: rgba(0,0,0,0.7);
             backdrop-filter: blur(5px);
             box-shadow: 0 0 20px rgba(179,136,255,0.3);
+            overflow-y: auto;
+            max-height: 70vh;
         }
         
         .message {
-            margin: 15px 0;
+            margin: 12px 0;
             padding: 12px;
             border-radius: 12px;
             position: relative;
             transition: transform 0.3s;
+            word-break: break-word;
+            line-height: 1.6;
         }
         
         .user-message {
@@ -56,22 +65,28 @@
             content: "✨";
             position: absolute;
             left: -30px;
-            top: 5px;
+            top: 8px;
+            font-size: 1.2em;
         }
         
         pre {
             background: #000000cc!important;
             border: 1px solid #7c4dff!important;
             border-radius: 8px;
-            padding: 12px!important;
-            margin: 10px 0;
+            padding: 15px!important;
+            margin: 12px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+            line-height: 1.5;
         }
         
         .input-area {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             background: rgba(26, 35, 126, 0.3);
-            padding: 15px;
+            padding: 12px;
             border-radius: 12px;
         }
         
@@ -84,16 +99,20 @@
             color: #fff;
             border-radius: 8px;
             font-size: 16px;
+            resize: vertical;
+            line-height: 1.6;
         }
         
         button {
             background: linear-gradient(45deg, #4a148c, #7c4dff);
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 12px 24px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
+            align-self: flex-end;
+            font-size: 16px;
         }
         
         button:hover {
@@ -104,7 +123,8 @@
         .controls {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            gap: 15px;
         }
         
         select {
@@ -113,6 +133,8 @@
             padding: 8px 15px;
             border: 1px solid var(--星语);
             border-radius: 6px;
+            flex: 1;
+            max-width: 300px;
         }
         
         @keyframes titleGlow {
@@ -124,23 +146,58 @@
             text-align: center;
             color: #b388ff;
             animation: titleGlow 2s infinite;
-            margin: 20px 0;
+            margin: 15px 0;
+            font-size: 2.2em;
         }
         
-        .cursor {
-            display: inline-block;
-            width: 2px;
-            background: #7c4dff;
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            50% { opacity: 0; }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            #chat-container {
+                max-height: 65vh;
+                padding: 10px;
+                margin: 10px 0;
+            }
+            
+            .user-message {
+                margin-left: 5%;
+            }
+            
+            .ai-message {
+                margin-right: 5%;
+            }
+            
+            .ai-message::before {
+                left: -25px;
+                font-size: 1em;
+            }
+            
+            select {
+                padding: 6px 12px;
+                max-width: 200px;
+            }
+            
+            button {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+            
+            #user-input {
+                min-height: 70px;
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+                margin: 10px 0;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>星辰ai</h1>
+    <h1>星辰AI</h1>
     <div class="controls">
         <select id="model">
             <option value="deepseek-chat">星海漫游模式</option>
@@ -158,6 +215,7 @@
     <script>
         let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
         
+        // 持久化存储
         function saveHistory() {
             localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
         }
@@ -165,47 +223,37 @@
         function clearHistory() {
             chatHistory = [];
             saveHistory();
-            document.getElementById('chat-container').innerHTML = '<div class="ai-message">（星轨已重置，静候新的涟漪...）</div>';
+            document.getElementById('chat-container').innerHTML = '<div class="ai-message"><pre>（星轨已重置，静候新的涟漪...）</pre></div>';
         }
 
-        function addMessage(role, content, isHistory = false) {
+        function addMessage(role, content) {
             const container = document.getElementById('chat-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}-message`;
             
-            if (role === 'ai' && !isHistory) {
-                messageDiv.innerHTML = '<div class="typing"></div>';
-                typeText(messageDiv.querySelector('.typing'), content);
-            } else {
-                messageDiv.innerHTML = formatContent(content);
-            }
+            // 统一使用pre标签包装AI消息
+            const formattedContent = formatContent(content);
+            messageDiv.innerHTML = role === 'ai' 
+                ? `<pre>${formattedContent}</pre>` 
+                : formattedContent;
             
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+            
+            // 自动高亮代码块
+            Prism.highlightAllUnder(messageDiv);
         }
 
         function formatContent(text) {
-            return text.replace(/<pre>([\s\S]*?)<\/pre>/g, (_, code) => {
-                return `<pre class="language-"><code>${code}</code><button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousSibling.textContent)">复制星纹</button></pre>`;
-            });
-        }
-
-        function typeText(element, text) {
-            let index = 0;
-            const speed = 10;
-            
-            function type() {
-                if (index < text.length) {
-                    element.innerHTML = text.slice(0, index) + '<span class="cursor">|</span>';
-                    index++;
-                    setTimeout(type, speed);
-                } else {
-                    element.innerHTML = text;
-                    Prism.highlightAllUnder(element.parentElement);
-                }
-            }
-            
-            type();
+            // 处理换行和基本格式
+            return text
+                .replace(/\n/g, '<br>')
+                .replace(/```(\w+)?\s*([\s\S]*?)```/g, (_, lang, code) => {
+                    return `<code class="language-${lang || ''}">${code}</code>
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousSibling.textContent)">
+                                复制星纹
+                            </button>`;
+                });
         }
 
         async function sendMessage() {
@@ -217,6 +265,7 @@
             document.getElementById('user-input').value = '';
             addMessage('user', userInput);
             
+            // 更新聊天记录
             chatHistory.push({ role: 'user', content: userInput });
             
             try {
@@ -227,11 +276,13 @@
                         model,
                         messages: [{
                             role: "system",
-                            content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。"
+                            content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。所有输出必须使用<pre>标签包裹，代码块使用```包裹。和你对话的人不是闪电"
                         }, ...chatHistory]
                     })
                 });
 
+                if (!response.ok) throw new Error(`HTTP错误 ${response.status}`);
+                
                 const data = await response.json();
                 const aiResponse = data.choices[0].message.content;
                 
@@ -240,13 +291,18 @@
                 saveHistory();
             } catch (error) {
                 console.error('星轨异常:', error);
+                addMessage('ai', `<pre>（星轨扰动）量子通信异常：${error.message}</pre>`);
             }
         }
 
+        // 初始化加载历史记录
         function init() {
             document.getElementById('model').value = 'deepseek-chat';
-            chatHistory.forEach(msg => addMessage(msg.role, msg.content, true));
+            chatHistory.forEach(msg => addMessage(msg.role, msg.content));
             Prism.highlightAll();
+            
+            // 自动聚焦输入框
+            document.getElementById('user-input').focus();
         }
         
         init();
