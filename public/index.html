@@ -1,552 +1,255 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI 聊天 - 星辰</title>
-  <style>
-    :root {
-      --background-color: #000;
-      --primary-color: #00ccff;
-      --assistant-color: #00ff88;
-      --container-bg: rgba(0, 0, 0, 0.7);
-      --chat-box-bg: rgba(0, 0, 0, 0.5);
-      --border-color: rgba(255, 255, 255, 0.2);
-      --button-bg: #007bff;
-      --button-hover-bg: #0056b3;
-      --copy-button-bg: #28a745;
-      --copy-button-hover-bg: #218838;
-      --clear-button-bg: #dc3545;
-      --clear-button-hover-bg: #c82333;
-      --font-family: 'Arial', sans-serif;
-      --typing-speed: 50ms;
-    }
-
-    body {
-      font-family: var(--font-family);
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: var(--background-color);
-      overflow: hidden;
-      color: #fff;
-    }
-
-    .background-layer {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -3;
-      overflow: hidden;
-    }
-
-    .star {
-      position: absolute;
-      background: white;
-      border-radius: 50%;
-      opacity: 0.8;
-      animation: twinkle 2s infinite ease-in-out;
-    }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.3; transform: scale(0.8); }
-      50% { opacity: 1; transform: scale(1.2); }
-    }
-
-    .nebula {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at 30% 30%, rgba(11, 61, 145, 0.5), transparent),
-                  radial-gradient(circle at 70% 70%, rgba(145, 11, 61, 0.5), transparent);
-      animation: moveNebula 30s linear infinite;
-      z-index: -2;
-    }
-
-    @keyframes moveNebula {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(-50%, -50%); }
-    }
-
-    .galaxy {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(45deg, rgba(11, 61, 145, 0.2), rgba(145, 11, 61, 0.2));
-      animation: rotateGalaxy 60s linear infinite;
-      z-index: -1;
-    }
-
-    @keyframes rotateGalaxy {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .chat-container {
-      width: 90%;
-      max-width: 500px;
-      background-color: var(--container-bg);
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      z-index: 1;
-      margin-bottom: 60px;
-    }
-
-    .chat-box {
-      flex: 1;
-      max-height: 400px;
-      overflow-y: auto;
-      border: 1px solid var(--border-color);
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      background-color: var(--chat-box-bg);
-    }
-
-    .message {
-      margin-bottom: 10px;
-      word-wrap: break-word;
-    }
-
-    .message.user {
-      text-align: right;
-      color: var(--primary-color);
-    }
-
-    .message.assistant {
-      text-align: left;
-      color: var(--assistant-color);
-    }
-
-    .code-container {
-      position: relative;
-      background-color: var(--chat-box-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 5px;
-      padding: 10px;
-      margin: 10px 0;
-    }
-
-    .copy-button {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      background-color: var(--copy-button-bg);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 5px 10px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: background-color 0.3s;
-    }
-
-    .copy-button:hover {
-      background-color: var(--copy-button-hover-bg);
-    }
-
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      margin: 0;
-      color: var(--assistant-color);
-      font-family: 'Courier New', Courier, monospace;
-    }
-
-    .input-container {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: var(--container-bg);
-      padding: 10px;
-      box-sizing: border-box;
-      display: flex;
-      gap: 10px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 5px;
-      background-color: var(--chat-box-bg);
-      color: #fff;
-      outline: none;
-    }
-
-    input[type="text"]:disabled {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    button.send-button, button.clear-button {
-      padding: 10px 20px;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: background-color 0.3s;
-    }
-
-    button.send-button {
-      background-color: var(--button-bg);
-    }
-
-    button.send-button:hover {
-      background-color: var(--button-hover-bg);
-    }
-
-    button.send-button::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 300%;
-      height: 300%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 10%, transparent 10.01%);
-      transform: translate(-50%, -50%) scale(0);
-      transition: transform 0.5s ease-out;
-    }
-
-    button.send-button:hover::after {
-      transform: translate(-50%, -50%) scale(1);
-    }
-
-    button.clear-button {
-      background-color: var(--clear-button-bg);
-    }
-
-    button.clear-button:hover {
-      background-color: var(--clear-button-hover-bg);
-    }
-
-    button.clear-button::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 300%;
-      height: 300%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 10%, transparent 10.01%);
-      transform: translate(-50%, -50%) scale(0);
-      transition: transform 0.5s ease-out;
-    }
-
-    button.clear-button:hover::after {
-      transform: translate(-50%, -50%) scale(1);
-    }
-
-    @media (max-width: 600px) {
-      .chat-container {
-        width: 95%;
-        padding: 15px;
-      }
-
-      button.send-button, button.clear-button {
-        padding: 10px;
-      }
-
-      .copy-button {
-        padding: 4px 8px;
-        font-size: 10px;
-      }
-    }
-
-    .typing::after {
-      content: '|';
-      animation: blink 1s step-start infinite;
-    }
-
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>星辰·宇宙智者</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css">
+    <style>
+        :root {
+            --星蓝: #1a237e;
+            --星辉: #4a148c;
+            --星轨: #311b92;
+            --星语: #b388ff;
+        }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(45deg, #0a0a2e, #1a1a4a);
+            color: #e0e0e0;
+        }
+        
+        #chat-container {
+            height: 70vh;
+            border: 2px solid var(--星语);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 20px rgba(179,136,255,0.3);
+        }
+        
+        .message {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 12px;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #1a237eaa, #0d47a1aa);
+            margin-left: 15%;
+            border: 1px solid var(--星语);
+        }
+        
+        .ai-message {
+            background: linear-gradient(135deg, #4a148c77, #6a1b9a77);
+            margin-right: 15%;
+            border: 1px solid #7c4dff;
+        }
+        
+        .ai-message::before {
+            content: "✨";
+            position: absolute;
+            left: -30px;
+            top: 5px;
+        }
+        
+        pre {
+            background: #000000cc!important;
+            border: 1px solid #7c4dff!important;
+            border-radius: 8px;
+            padding: 12px!important;
+            margin: 10px 0;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+            background: rgba(26, 35, 126, 0.3);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        #user-input {
+            flex: 1;
+            min-height: 80px;
+            padding: 12px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid var(--星语);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4a148c, #7c4dff);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            box-shadow: 0 0 15px #7c4dff;
+            transform: translateY(-2px);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        select {
+            background: rgba(26, 35, 126, 0.7);
+            color: white;
+            padding: 8px 15px;
+            border: 1px solid var(--星语);
+            border-radius: 6px;
+        }
+        
+        @keyframes titleGlow {
+            0%,100% { text-shadow: 0 0 10px #7c4dff; }
+            50% { text-shadow: 0 0 20px #b388ff; }
+        }
+        
+        h1 {
+            text-align: center;
+            color: #b388ff;
+            animation: titleGlow 2s infinite;
+            margin: 20px 0;
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            background: #7c4dff;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
 </head>
 <body>
-  <div class="background-layer">
-    <script>
-      (function createStars() {
-        const starsCount = 150;
-        const starsContainer = document.createElement('div');
-        starsContainer.className = 'stars-container';
-        document.querySelector('.background-layer').appendChild(starsContainer);
-
-        for (let i = 0; i < starsCount; i++) {
-          const star = document.createElement('div');
-          star.className = 'star';
-          const size = Math.random() * 2 + 1;
-          star.style.width = `${size}px`;
-          star.style.height = `${size}px`;
-          star.style.top = `${Math.random() * 100}%`;
-          star.style.left = `${Math.random() * 100}%`;
-          star.style.animationDuration = `${Math.random() * 3 + 2}s`;
-          star.style.opacity = Math.random();
-          starsContainer.appendChild(star);
-        }
-      })();
-    </script>
-    <div class="nebula"></div>
-    <div class="galaxy"></div>
-  </div>
-  <div class="chat-container" role="main" aria-labelledby="chat-title">
-    <h2 id="chat-title" style="display:none;">AI 聊天 - 星辰</h2>
-    <div class="chat-box" id="chat-box" aria-live="polite" aria-atomic="false">
-      <div class="message assistant">
-        <pre>（星辰静静地凝视着你）你好，我是星辰，星空的守护者。你有什么问题吗？</pre>
-      </div>
+    <h1>星辰ai</h1>
+    <div class="controls">
+        <select id="model">
+            <option value="deepseek-chat">星海漫游模式</option>
+            <option value="deepseek-reasoner">星河推演模式</option>
+        </select>
+        <button onclick="clearHistory()">重置星轨</button>
     </div>
-  </div>
-  <div class="input-container">
-    <input type="text" id="user-input" placeholder="输入你的问题..." aria-label="输入你的问题" onkeypress="handleKeyPress(event)">
-    <button class="send-button" onclick="sendMessage()" aria-label="发送消息">发送</button>
-    <button class="clear-button" onclick="clearChatHistory()" aria-label="清除聊天记录">清除</button>
-  </div>
-  <script>
-    function loadChatHistory() {
-      const chatBox = document.getElementById('chat-box');
-      const chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    <div id="chat-container"></div>
+    <div class="input-area">
+        <textarea id="user-input" placeholder="向星辰发送量子涟漪..."></textarea>
+        <button onclick="sendMessage()">跃迁发送</button>
+    </div>
 
-      chatHistory.forEach((message) => {
-        if (message.type === 'user') {
-          const userMessage = document.createElement('div');
-          userMessage.className = 'message user';
-          const preUser = document.createElement('pre');
-          preUser.textContent = message.content;
-          userMessage.appendChild(preUser);
-          chatBox.appendChild(userMessage);
-        } else if (message.type === 'assistant') {
-          const assistantMessage = document.createElement('div');
-          assistantMessage.className = 'message assistant';
-          chatBox.appendChild(assistantMessage);
-
-          if (message.content.includes('```')) {
-            const [textBefore, codeBlock, textAfter] = message.content.split(/```/);
-
-            if (textBefore.trim()) {
-              const textDiv = document.createElement('div');
-              textDiv.innerHTML = textBefore.trim() + '<br>';
-              assistantMessage.appendChild(textDiv);
-            }
-
-            const codeContent = codeBlock.trim();
-            const codeContainer = document.createElement('div');
-            codeContainer.className = 'code-container';
-            const copyButton = document.createElement('button');
-            copyButton.className = 'copy-button';
-            copyButton.textContent = '复制';
-            copyButton.setAttribute('aria-label', '复制代码');
-            copyButton.onclick = () => copyToClipboard(codeContent);
-            const preAssistant = document.createElement('pre');
-            preAssistant.textContent = codeContent;
-            codeContainer.appendChild(preAssistant);
-            codeContainer.appendChild(copyButton);
-            assistantMessage.appendChild(codeContainer);
-
-            if (textAfter.trim()) {
-              const textDiv = document.createElement('div');
-              textDiv.innerHTML = textAfter.trim();
-              assistantMessage.appendChild(textDiv);
-            }
-          } else {
-            const textDiv = document.createElement('div');
-            textDiv.textContent = message.content;
-            assistantMessage.appendChild(textDiv);
-          }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script>
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+        
+        function saveHistory() {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
         }
-      });
 
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+        function clearHistory() {
+            chatHistory = [];
+            saveHistory();
+            document.getElementById('chat-container').innerHTML = '<div class="ai-message">（星轨已重置，静候新的涟漪...）</div>';
+        }
 
-    async function typeWriter(element, text, isTyping = true) {
-      if (!isTyping) {
-        element.innerHTML = text;
-        return;
-      }
-
-      return new Promise((resolve) => {
-        const speed = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--typing-speed')) || 50;
-        let i = 0;
-        element.innerHTML = '';
-
-        function type() {
-          if (i < text.length) {
-            const char = text.charAt(i);
-            if (char === '\n') {
-              element.innerHTML += '<br>';
+        function addMessage(role, content, isHistory = false) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            if (role === 'ai' && !isHistory) {
+                messageDiv.innerHTML = '<div class="typing"></div>';
+                typeText(messageDiv.querySelector('.typing'), content);
             } else {
-              element.innerHTML += char;
+                messageDiv.innerHTML = formatContent(content);
             }
-            i++;
-            setTimeout(type, speed);
-          } else {
-            resolve();
-          }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
         }
 
-        type();
-      });
-    }
-
-    function saveChatHistory(message) {
-      const chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-      chatHistory.push(message);
-      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-    }
-
-    async function sendMessage() {
-      const userInput = document.getElementById('user-input').value.trim();
-      if (!userInput) return;
-
-      const input = document.getElementById('user-input');
-      const button = document.querySelector('.send-button');
-      input.disabled = true;
-      button.disabled = true;
-
-      const chatBox = document.getElementById('chat-box');
-
-      const userMessage = {
-        type: 'user',
-        content: userInput
-      };
-      saveChatHistory(userMessage);
-
-      const userMessageDiv = document.createElement('div');
-      userMessageDiv.className = 'message user';
-      const preUser = document.createElement('pre');
-      preUser.textContent = userInput;
-      userMessageDiv.appendChild(preUser);
-      chatBox.appendChild(userMessageDiv);
-
-      try {
-        const response = await fetch('/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: userInput }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`请求失败，状态码：${response.status}`);
+        function formatContent(text) {
+            return text.replace(/<pre>([\s\S]*?)<\/pre>/g, (_, code) => {
+                return `<pre class="language-"><code>${code}</code><button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousSibling.textContent)">复制星纹</button></pre>`;
+            });
         }
 
-        const data = await response.json();
-
-        const assistantMessage = {
-          type: 'assistant',
-          content: data.response
-        };
-        saveChatHistory(assistantMessage);
-
-        const assistantMessageDiv = document.createElement('div');
-        assistantMessageDiv.className = 'message assistant';
-        chatBox.appendChild(assistantMessageDiv);
-
-        if (data.response.includes('```')) {
-          const [textBefore, codeBlock, textAfter] = data.response.split(/```/);
-
-          if (textBefore.trim()) {
-            const textDiv = document.createElement('div');
-            textDiv.innerHTML = textBefore.trim() + '<br>';
-            assistantMessageDiv.appendChild(textDiv);
-          }
-
-          const codeContent = codeBlock.trim();
-          const codeContainer = document.createElement('div');
-          codeContainer.className = 'code-container';
-          const copyButton = document.createElement('button');
-          copyButton.className = 'copy-button';
-          copyButton.textContent = '复制';
-          copyButton.setAttribute('aria-label', '复制代码');
-          copyButton.onclick = () => copyToClipboard(codeContent);
-          const preAssistant = document.createElement('pre');
-          preAssistant.textContent = codeContent;
-          codeContainer.appendChild(preAssistant);
-          codeContainer.appendChild(copyButton);
-          assistantMessageDiv.appendChild(codeContainer);
-
-          if (textAfter.trim()) {
-            const textDiv = document.createElement('div');
-            textDiv.innerHTML = textAfter.trim();
-            assistantMessageDiv.appendChild(textDiv);
-          }
-        } else {
-          const textDiv = document.createElement('div');
-          textDiv.textContent = data.response;
-          assistantMessageDiv.appendChild(textDiv);
+        function typeText(element, text) {
+            let index = 0;
+            const speed = 10;
+            
+            function type() {
+                if (index < text.length) {
+                    element.innerHTML = text.slice(0, index) + '<span class="cursor">|</span>';
+                    index++;
+                    setTimeout(type, speed);
+                } else {
+                    element.innerHTML = text;
+                    Prism.highlightAllUnder(element.parentElement);
+                }
+            }
+            
+            type();
         }
-      } catch (error) {
-        console.error('请求出错：', error);
-        const errorMessage = {
-          type: 'assistant',
-          content: '请求出错，请稍后重试。'
-        };
-        saveChatHistory(errorMessage);
 
-        const errorMessageDiv = document.createElement('div');
-        errorMessageDiv.className = 'message assistant';
-        const preError = document.createElement('pre');
-        preError.textContent = '请求出错，请稍后重试。';
-        errorMessageDiv.appendChild(preError);
-        chatBox.appendChild(errorMessageDiv);
-      } finally {
-        input.disabled = false;
-        button.disabled = false;
-      }
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input').value.trim();
+            const model = document.getElementById('model').value;
+            
+            if (!userInput) return;
 
-      chatBox.scrollTop = chatBox.scrollHeight;
-      document.getElementById('user-input').value = '';
-      input.focus();
-    }
+            document.getElementById('user-input').value = '';
+            addMessage('user', userInput);
+            
+            chatHistory.push({ role: 'user', content: userInput });
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        model,
+                        messages: [{
+                            role: "system",
+                            content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。"
+                        }, ...chatHistory]
+                    })
+                });
 
-    function handleKeyPress(event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        sendMessage();
-      }
-    }
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                
+                addMessage('ai', aiResponse);
+                chatHistory.push({ role: 'assistant', content: aiResponse });
+                saveHistory();
+            } catch (error) {
+                console.error('星轨异常:', error);
+            }
+        }
 
-    function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        alert('已复制到剪贴板！');
-      }).catch((error) => {
-        console.error('复制失败：', error);
-        alert('复制失败，请手动复制。');
-      });
-    }
-
-    function clearChatHistory() {
-      if (confirm('确定要清除所有聊天记录吗？')) {
-        localStorage.removeItem('chatHistory');
-        const chatBox = document.getElementById('chat-box');
-        chatBox.innerHTML = '';
-        const initialMessage = document.createElement('div');
-        initialMessage.className = 'message assistant';
-        const preInitial = document.createElement('pre');
-        preInitial.textContent = '（星辰静静地凝视着你）你好，我是星辰，星空的守护者。你有什么问题吗？';
-        initialMessage.appendChild(preInitial);
-        chatBox.appendChild(initialMessage);
-      }
-    }
-
-    window.onload = function() {
-      loadChatHistory();
-    };
-  </script>
+        function init() {
+            document.getElementById('model').value = 'deepseek-chat';
+            chatHistory.forEach(msg => addMessage(msg.role, msg.content, true));
+            Prism.highlightAll();
+        }
+        
+        init();
+    </script>
 </body>
 </html>
