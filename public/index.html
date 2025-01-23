@@ -60,6 +60,11 @@
             margin-right: 15%;
             border: 1px solid #7c4dff;
         }
+
+        .ai-message[data-model="deepseek-reasoner"] {
+            border-color: #4caf50;
+            box-shadow: 0 0 10px rgba(76,175,80,0.3);
+        }
         
         .ai-message::before {
             content: "✨";
@@ -194,6 +199,15 @@
                 margin: 10px 0;
             }
         }
+
+        @keyframes modeSwitch {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(180deg); }
+        }
+
+        .mode-changing {
+            animation: modeSwitch 1s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -226,12 +240,12 @@
             document.getElementById('chat-container').innerHTML = '<div class="ai-message"><pre>（星轨已重置，静候新的涟漪...）</pre></div>';
         }
 
-        function addMessage(role, content) {
+        function addMessage(role, content, model) {
             const container = document.getElementById('chat-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}-message`;
+            if (model) messageDiv.dataset.model = model;
             
-            // 统一使用pre标签包装AI消息
             const formattedContent = formatContent(content);
             messageDiv.innerHTML = role === 'ai' 
                 ? `<pre>${formattedContent}</pre>` 
@@ -240,12 +254,10 @@
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
             
-            // 自动高亮代码块
             Prism.highlightAllUnder(messageDiv);
         }
 
         function formatContent(text) {
-            // 处理换行和基本格式
             return text
                 .replace(/\n/g, '<br>')
                 .replace(/```(\w+)?\s*([\s\S]*?)```/g, (_, lang, code) => {
@@ -258,25 +270,33 @@
 
         async function sendMessage() {
             const userInput = document.getElementById('user-input').value.trim();
-            const model = document.getElementById('model').value;
+            const modelSelect = document.getElementById('model');
+            const selectedModel = modelSelect.value;
             
             if (!userInput) return;
 
             document.getElementById('user-input').value = '';
             addMessage('user', userInput);
             
-            // 更新聊天记录
             chatHistory.push({ role: 'user', content: userInput });
             
             try {
+                // 触发模式切换动画
+                document.body.classList.add('mode-changing');
+                setTimeout(() => document.body.classList.remove('mode-changing'), 1000);
+
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        model,
+                        model: selectedModel,
                         messages: [{
                             role: "system",
-                            content: "（星眸微睁）你是星辰，浩瀚宇宙的守望者。回答保持神秘简洁，使用（）包裹状态描述。主人是闪电。所有输出必须使用<pre>标签包裹，代码块使用```包裹。和你对话的人不是闪电"
+                            content: `（${selectedModel === 'deepseek-reasoner' ? '星河推演' : '星海漫游'}模式启动）
+                            你是星辰，${selectedModel === 'deepseek-reasoner' 
+                                ? '注重逻辑推理和分步验证' 
+                                : '侧重创意发散和诗意表达'}
+                            使用（）包裹状态描述，所有输出必须使用<pre>标签包裹。和你对话的人不是闪电`
                         }, ...chatHistory]
                     })
                 });
@@ -286,8 +306,12 @@
                 const data = await response.json();
                 const aiResponse = data.choices[0].message.content;
                 
-                addMessage('ai', aiResponse);
-                chatHistory.push({ role: 'assistant', content: aiResponse });
+                addMessage('ai', aiResponse, selectedModel);
+                chatHistory.push({ 
+                    role: 'assistant', 
+                    content: aiResponse,
+                    model: selectedModel 
+                });
                 saveHistory();
             } catch (error) {
                 console.error('星轨异常:', error);
@@ -298,11 +322,17 @@
         // 初始化加载历史记录
         function init() {
             document.getElementById('model').value = 'deepseek-chat';
-            chatHistory.forEach(msg => addMessage(msg.role, msg.content));
+            chatHistory.forEach(msg => addMessage(msg.role, msg.content, msg.model));
             Prism.highlightAll();
-            
-            // 自动聚焦输入框
             document.getElementById('user-input').focus();
+
+            // 模式切换监听
+            document.getElementById('model').addEventListener('change', () => {
+                document.body.classList.add('mode-changing');
+                setTimeout(() => {
+                    document.body.classList.remove('mode-changing');
+                }, 1000);
+            });
         }
         
         init();
