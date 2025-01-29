@@ -1,0 +1,12 @@
+{
+  "name": "xc",
+  "version": "1.0.0",
+  "description": "星辰AI助手",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve index.html"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
